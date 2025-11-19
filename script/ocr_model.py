@@ -24,7 +24,7 @@ class OcrModel(BaseModel):
             self.reader = easyocr.Reader(languages, gpu=False)
         else:
             self.reader = None
-
+    # -> 이표시는 주석으로 이렇게 하세요라는 표시
     def preprocess(self, plate_image: np.ndarray) -> np.ndarray:
         """
         OCR 전처리
