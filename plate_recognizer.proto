@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package plate;
+
+service PlateRecognizer {
+  // 하나의 이미지에서 번호판 인식
+  rpc Recognize (PlateRequest) returns (PlateResponse);
+}
+enum RecognizeMode {
+  MODE_FULL = 0;        // 탐지 + OCR 모두
+  MODE_DETECT_ONLY = 1; // 박스만
+  MODE_OCR_ONLY = 2;    // OCR만 (박스 좌표가 이미 있다고 가정?)
+}
+message PlateRequest {
+  bytes image = 1; // 원본 이미지 바이트
+    RecognizeMode mode = 2; // 어던 모든 인지 확인
+}
+
+message PlateResponse {
+  string plate_number = 1; // 인식된 번호판 텍스트
+
+  float x = 2;      // 번호판 박스 왼쪽 위 x
+  float y = 3;      // 번호판 박스 왼쪽 위 y
+  float width = 4;  // 박스 너비
+  float height = 5; // 박스 높이
+}
