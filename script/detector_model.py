@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 from ultralytics import YOLO
 
-from base_model import BaseModel
+from .base_model import BaseModel
 
 
 @dataclass

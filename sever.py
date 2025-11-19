@@ -6,8 +6,8 @@ from concurrent import futures
 import plate_recognizer_pb2 as pb2
 import plate_recognizer_pb2_grpc as pb2_grpc
 
-from model.detector_model import DetectorModel
-from model.ocr_model import OcrModel
+from script.detector_model import DetectorModel
+from script.ocr_model import OcrModel
 
 class PlateRecognizerService(pb2_grpc.PlateRecognizerServicer):
     def __init__(self):
