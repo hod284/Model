@@ -1,0 +1,6 @@
+grpcio
+grpcio-tools
+easyocr
+opencv-python-headless
+ultralytics
+numpy

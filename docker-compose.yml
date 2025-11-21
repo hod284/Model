@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  ocr:
+    image:  hod284/python-action:lastest
+    container_name: pythonserver
+    ports:
+      - "50051:50051"
+    environment:
+       TZ: Asia/Seoul
