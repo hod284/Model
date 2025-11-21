@@ -146,6 +146,7 @@ def serve():
         server
     )
 
+
     # 50051 포트에서 대기
     server.add_insecure_port("[::]:50051")
     print("PlateRecognizer gRPC server started on port 50051")
