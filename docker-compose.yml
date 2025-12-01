@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   ocr:
-    image:  hod284/python-action:lastest
+    image:  hod284/python-actions:latest
     container_name: pythonserver
     ports:
       - "50051:50051"
