@@ -12,7 +12,7 @@ from script.ocr_model import OcrModel
 class PlateRecognizerService(pb2_grpc.PlateRecognizerServicer):
     def __init__(self):
         # YOLO 번호판 탐지 모델
-        self.detector = DetectorModel()
+        self.detector = DetectorModel(weights="license_plate_detector.pt")
 
         # easyocr OCR
         self.ocr = OcrModel(use_dummy=False, languages=['ko', 'en'])

@@ -23,12 +23,13 @@ class DetectorModel(BaseModel):
     - train(data_yaml, epochs, imgsz): YOLO 학습 래핑
     """
 
-    def __init__(self, weights: str = ""):
+    def __init__(self, weights: str = "",expand_box: bool = True):
         """
         weights: 학습된 가중치 경로
         """
         self.weights_path = weights
         self.model = YOLO(weights)  # YOLOv8 모델 로드
+        self.expand_box = expand_box
 
     def predict(self, image: np.ndarray) -> List[BBox]:
         """
@@ -40,9 +41,26 @@ class DetectorModel(BaseModel):
         boxes: List[BBox] = []
         r = results[0]
 
+        h, w, _ = image.shape
+
         for b in r.boxes:
             x1, y1, x2, y2 = b.xyxy[0].tolist()
             conf = float(b.conf[0])
+
+            # 🔥 한국 번호판용 박스 확장
+            if self.expand_box:
+                width = x2 - x1
+                height = y2 - y1
+
+                # 좌우 12% 확장 (한글까지 포함)
+                expand_x = width * 0.12
+                x1 = max(0, x1 - expand_x)
+                x2 = min(w, x2 + expand_x)
+
+                # 상하 8% 확장
+                expand_y = height * 0.08
+                y1 = max(0, y1 - expand_y)
+                y2 = min(h, y2 + expand_y)
 
             boxes.append(
                 BBox(
