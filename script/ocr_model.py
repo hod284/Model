@@ -25,46 +25,31 @@ class OcrModel(BaseModel):
             self.reader = easyocr.Reader(languages, gpu=False)
         else:
             self.reader = None
-    # -> 이표시는 주석으로 이렇게 하세요라는 표시
+
     def preprocess(self, plate_image: np.ndarray) -> np.ndarray:
         """
-        OCR 전처리
-        - BGR → GRAY
-        - 필요시 이진화 등 추가
+        OCR 기본 전처리 - 가벼운 전처리만
         """
         if plate_image is None or plate_image.size == 0:
             return plate_image
-        # 그레이스케일
+        
+        # 1. 그레이스케일
         gray = cv2.cvtColor(plate_image, cv2.COLOR_BGR2GRAY)
         
-        # 크기키우기
+        # 2. 크기 키우기
         h, w = gray.shape
-        if h < 150:
-            scale = 150 / h
-            gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            
-        #노이즈 제거  
-        denoised = cv2.fastNlMeansDenoising(gray,h=10)
-        # 4. 샤프닝 (선명도 향상!)
-        kernel = np.array([ [-1, -1, -1], [-1,  9, -1],[-1, -1, -1]])
-        sharpened = cv2.filter2D(denoised, -1, kernel)
-    
-        # 5. CLAHE (명암 대비)
+        target_height = 150
+        if h < target_height:
+            scale = target_height / h
+            gray = cv2.resize(gray, None, fx=scale, fy=scale, 
+                            interpolation=cv2.INTER_CUBIC)
+            print(f"[OCR] 크기 조정: {h}px → {target_height}px")
+        
+        # 3. CLAHE만 (명암 대비)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-        enhanced = clahe.apply(sharpened)
-    
-        # 6. 이진화 (흑백 명확히)
-        _, binary = cv2.threshold(enhanced, 0, 255, 
-                              cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    
-        # 7. 모폴로지 (글자 두껍게)
-        kernel2 = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2))
-        morphed = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel2)
-    
-        # 8. 패딩
-        padded = cv2.copyMakeBorder(morphed, 10, 10, 10, 10,
-                                cv2.BORDER_CONSTANT, value=255)
-        return padded
+        enhanced = clahe.apply(gray)
+        
+        return enhanced
 
     def predict(self, plate_image: np.ndarray) -> str:
         """
@@ -97,8 +82,8 @@ class OcrModel(BaseModel):
                 if not results:
                     continue
                 
-                # 모든 텍스트 합치기
-                all_text =  "".join(str(r) for r in results).replace(" ", "")
+                # 모든 텍스트 합치기 (타입 명시)
+                all_text = "".join(str(r) for r in results).replace(" ", "")
                 
                 # 패턴 추출 시도
                 plate = self.extract_korean_plate(all_text)
@@ -150,7 +135,7 @@ class OcrModel(BaseModel):
         # 강한 샤프닝
         kernel = np.array([
             [-1, -1, -1],
-            [-1, 12, -1],  # ← 9 → 12 (더 강하게)
+            [-1, 12, -1],
             [-1, -1, -1]
         ])
         sharpened = cv2.filter2D(gray, -1, kernel)
@@ -240,6 +225,6 @@ class OcrModel(BaseModel):
             result += corrections.get(char, char)
         
         return result
+
     def train(self, *args, **kwargs):
         raise NotImplementedError("easyocr 자체 학습은 여기서 지원하지 않습니다.")
-    
