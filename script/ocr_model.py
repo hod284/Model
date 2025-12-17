@@ -2,7 +2,7 @@ from typing import List, Tuple, Any
 import numpy as np
 import cv2
 import easyocr
-
+import re
 from .base_model import BaseModel
 
 
@@ -130,14 +130,23 @@ class OcrModel(BaseModel):
         result = self.combine_korean(result)
     
          # 3. 한국 번호판 형식 검증
-        import re
-        pattern = r'^\d{2,3}[가-힣]\d{4}$'
+        patterns = [
+            # 1. 일반 자동차 (가장 흔함)
+            r'\d{2,3}[가-힣]\d{4}',
+            
+            # 2. 오토바이/특수 (지역명 + 숫자 + 한글 + 숫자)
+            r'[가-힣]{2,3}\d{1,2}[가-힣]\d{4}',
+            
+            # 3. 영업용 (지역명 + 숫자 + 한글 + 숫자)
+            r'[가-힣]{2}\d{2,3}[가-힣]\d{4}',
+        ]
+        
     
-        if re.match(pattern, result):
-             return result
-        else:
-            # 형식 안 맞으면 원본 반환
-           return text
+        for pattern in patterns:
+            matches = re.findall(pattern, text)
+            if matches:
+                return matches[0]
+        return ""
 
     def combine_korean(self, text):
         """
