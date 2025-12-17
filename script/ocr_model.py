@@ -39,7 +39,7 @@ class OcrModel(BaseModel):
         
         # 크기키우기
         h, w = gray.shape
-        if h > 100:
+        if h < 100:
             scale = 100 / h
             gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
             
@@ -85,42 +85,12 @@ class OcrModel(BaseModel):
         # detail=1 → 텍스트만 리스트로 반환
         results = self.reader.readtext(
            processed, 
-           detail=1,  # ← 변경
-           paragraph=False,
-           min_size=10,  # 최소 글자 크기
-           text_threshold=0.7,  # 텍스트 신뢰도
-           low_text=0.4,
-           link_threshold=0.4,
-           canvas_size=2560,  # 이미지 크기
-           mag_ratio=1.5  # 확대 비율
+           detail=0,  # ← 변경
         )
 
         if not results:
             return ""
-        # 신뢰도 높은 것만 (추가!) 
-        #50% 이상
-        # 안전하게 필터링
-        try:
-            filtered = [r for r in results if len(r) >= 3 and float(r[2]) > 0.5]
-        except (IndexError, TypeError, ValueError) as e:
-            print(f"필터링 오류: {e}")
-            # detail=0으로 처리 (fallback)
-            filtered = results
-    
-        if not filtered:
-           return ""
-       
-        # 안전하게 추출
-        try:
-           if len(filtered[0]) >= 3:  # detail=1 형식
-                best = max(filtered, key=lambda x: len(str(x[1])))[1]
-           else:  # detail=0 형식
-               best = max(filtered, key=len)
-        except (IndexError, TypeError, ValueError) as e:
-           print(f"추출 오류: {e}")
-           return ""
-       
-        # 가장 길어 보이는 문자열 선택
+        best = max(results, key=len)
         best = best.replace(" ", "")
         # ✅ 오인식 보정 (추가!)
         best = self.correct_ocr_errors(best)
