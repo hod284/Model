@@ -186,7 +186,10 @@ class OcrModel(BaseModel):
         """
         # 오인식 보정 먼저
         text = self.correct_ocr_errors(text)
-        
+            
+        # ✅ 공백 제거
+        text = text.replace(" ", "")
+
         # 패턴 우선순위대로 시도
         patterns = [
             
@@ -203,6 +206,7 @@ class OcrModel(BaseModel):
         for pattern in patterns:
             matches = re.findall(pattern, text)
             if matches:
+                print(f"[DEBUG] 매칭된 패턴: {pattern} → {matches[0]}")
                 return matches[0]
         
         return ""
@@ -211,36 +215,36 @@ class OcrModel(BaseModel):
         """
         OCR 오인식 보정 (영어↔숫자, 한글 오인식)
         """
-        # 영어 → 숫자 보정
+       # ✅ 1단계: 한글 지역명 오인식 보정 (먼저!)
+        word_corrections = {
+        '서물': '서울',
+        '서욕': '서울',
+        '서을': '서울',
+        '운산': '인천',
+        '정북': '전북',
+        '정남': '전남',
+        '충복': '충북',
+        '경기': '경기',
+        '부산': '부산',
+         }
+    
+        for wrong, correct in word_corrections.items():
+          text = text.replace(wrong, correct)
+    
+         # ✅ 2단계: 영어 → 숫자 보정
         char_corrections = {
-            'O': '0', 'o': '0',
-            'I': '1', 'l': '1',
-            'Z': '2',
-            'S': '5',
-            'B': '8',
-            'g': '9',
-        }
-        
+        'O': '0', 'o': '0',
+        'I': '1', 'l': '1',
+        'Z': '2',
+        'S': '5',
+        'B': '8',
+        'g': '9',
+         }
+    
         result = ""
         for char in text:
-            result += char_corrections.get(char, char)
-        
-        # ✅ 한글 오인식 보정 (단어 단위)
-        # 자주 틀리는 지역명/한글 쌍
-        word_corrections = {
-            '서물': '서울',
-            '운산': '인산',  # 드물지만
-            '정북': '전북',
-            '정남': '전남',
-            '충복': '충북',
-            '경기': '경기',
-            '부산': '부산',
-            # 필요시 추가
-        }
-        
-        for wrong, correct in word_corrections.items():
-            result = result.replace(wrong, correct)
-        
+           result += char_corrections.get(char, char)
+    
         return result
 
     def train(self, *args, **kwargs):
