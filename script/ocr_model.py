@@ -208,10 +208,10 @@ class OcrModel(BaseModel):
 
     def correct_ocr_errors(self, text: str) -> str:
         """
-        OCR 오인식 보정
+        OCR 오인식 보정 (영어↔숫자, 한글 오인식)
         """
         # 영어 → 숫자 보정
-        corrections = {
+        char_corrections = {
             'O': '0', 'o': '0',
             'I': '1', 'l': '1',
             'Z': '2',
@@ -222,7 +222,23 @@ class OcrModel(BaseModel):
         
         result = ""
         for char in text:
-            result += corrections.get(char, char)
+            result += char_corrections.get(char, char)
+        
+        # ✅ 한글 오인식 보정 (단어 단위)
+        # 자주 틀리는 지역명/한글 쌍
+        word_corrections = {
+            '서물': '서울',
+            '운산': '인산',  # 드물지만
+            '정북': '전북',
+            '정남': '전남',
+            '충복': '충북',
+            '경기': '경기',
+            '부산': '부산',
+            # 필요시 추가
+        }
+        
+        for wrong, correct in word_corrections.items():
+            result = result.replace(wrong, correct)
         
         return result
 
