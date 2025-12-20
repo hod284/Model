@@ -38,13 +38,14 @@ class OcrModel(BaseModel):
         
         # 2. 크기 키우기
         h, w = gray.shape
-        target_height = 150
+        target_height = 200
         if h < target_height:
             scale = target_height / h
             gray = cv2.resize(gray, None, fx=scale, fy=scale, 
                             interpolation=cv2.INTER_CUBIC)
             print(f"[OCR] 크기 조정: {h}px → {target_height}px")
-        
+       # 3. 노이즈 제거 추가
+        denoised = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
         # 3. CLAHE만 (명암 대비)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
         enhanced = clahe.apply(gray)
@@ -189,18 +190,21 @@ class OcrModel(BaseModel):
             
         # ✅ 공백 제거
         text = text.replace(" ", "")
-
+        print(f"[DEBUG] 보정 후 텍스트: {text}")
+        
+       
+        
         # 패턴 우선순위대로 시도
         patterns = [
             
-               # 1. 일반 자동차 (가장 흔함)
-        r'\d{2,3}[가-힣]\d{4}',
+              # 3. 영업용 (지역명 + 숫자 + 한글 + 숫자)
+        r'[가-힣]{2}\d{2,3}[가-힣]\d{4}',
         
         # 2. 오토바이/특수 (지역명 + 숫자 + 한글 1~2글자 + 숫자)
         r'[가-힣]{2,3}\d{1,2}[가-힣]{1,2}\d{4}',  # ← 여기 수정!
         
-        # 3. 영업용 (지역명 + 숫자 + 한글 + 숫자)
-        r'[가-힣]{2}\d{2,3}[가-힣]\d{4}',
+              # 1. 일반 자동차 (가장 흔함)
+        r'\d{2,3}[가-힣]\d{4}',
         ]
         
         for pattern in patterns:
@@ -244,6 +248,46 @@ class OcrModel(BaseModel):
         result = ""
         for char in text:
            result += char_corrections.get(char, char)
+        
+        # ✅ 3단계: 한글 오인식 보정 (파/피/표 등)
+        hangul_corrections = {
+        '피': '퍼',
+        '표': '파',
+        '파': '파',  # 그대로 유지
+        '하': '하',
+        '허': '하',
+        }
+    
+        for wrong, correct in hangul_corrections.items():
+           result = result.replace(wrong, correct)
+        
+        
+          # ✅ 4단계: 2줄 번호판 중복 숫자 제거
+          # 패턴: 지역명 + 숫자2-3자리 + (중복숫자) + 한글 + 숫자4자리
+         # 예: "강원32다9439" (정상) vs "강원322다9439" (오류)
+    
+         # 오토바이/2줄 번호판: 지역명 + 1-2자리 + 한글 + 4자리
+        motorcycle_pattern = re.match(
+           r'([가-힣]{2,3})(\d)(\d)([가-힣]{1,2})(\d{4})',
+          result
+        )
+        if motorcycle_pattern:
+           region, d1, d2, hangul, numbers = motorcycle_pattern.groups()
+           # "서울49퍼3151" → "서울4퍼3151"
+           result = f"{region}{d1}{hangul}{numbers}"
+           print(f"[DEBUG] 오토바이 패턴 수정: {motorcycle_pattern.group(0)} → {result}")
+    
+         # 일반 2줄 번호판: 지역명 + 2-3자리 + 한글 + 4자리
+        twoline_pattern = re.match(
+           r'([가-힣]{2,3})(\d{2})(\d)([가-힣])(\d{4})',
+           result
+           )
+        if twoline_pattern:
+           region, nums, extra, hangul, numbers = twoline_pattern.groups()
+           # "강원322다9439" → "강원32다9439"
+           result = f"{region}{nums}{hangul}{numbers}"
+           print(f"[DEBUG] 2줄 번호판 수정: {twoline_pattern.group(0)} → {result}")
+       
     
         return result
 
